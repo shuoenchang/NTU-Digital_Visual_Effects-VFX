@@ -7,6 +7,7 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 from copy import deepcopy
 
 
@@ -60,8 +61,8 @@ def shift_image(source, dx, dy):
 def count_error(source, target, maskSrc, maskTar):
     # img1 XOR img2 AND mask
     error = np.logical_xor(source, target)
-    error = np.logical_and(error, maskSrc)
-    error = np.logical_and(error, maskTar)
+    error = np.logical_xor(error, maskSrc)
+    error = np.logical_xor(error, maskTar)
     return np.sum(error)
     
 def find_shift(source, target, x, y, thres=4):
@@ -70,13 +71,13 @@ def find_shift(source, target, x, y, thres=4):
     bestX, bestY = 0, 0
     
     median = np.mean(source)
-    bitSrc = cv2.inRange(source, median, median)
+    bitSrc = cv2.inRange(source, median,256)
     maskSrc = cv2.inRange(source, median-thres, median+thres)
-    
+
     median = np.mean(target)
-    bitTar = cv2.inRange(target, median, median)
+    bitTar = cv2.inRange(target, median, 256)
     maskTar = cv2.inRange(target, median-thres, median+thres)
-    
+
     for dx in [0,-1,1]:
         for dy in [0,-1,1]:
             shiftSrc = shift_image(bitSrc, dx, dy)
@@ -149,17 +150,20 @@ def gsolve(Z, B, l, w):
     return g, lE
 
 
-def recovered_response(images, exposureTimes):
-    smallImages = deepcopy(images)
-    smallRow = 10
-    smallCol = 10
-    
+def align_images(images):
     for i in range(1, len(images)):
         img1 = cv2.cvtColor(images[i], cv2.COLOR_BGR2GRAY)
         img2 = cv2.cvtColor(images[i-1], cv2.COLOR_BGR2GRAY)
         dx, dy = align_image(img1, img2)
         images[i] = shift_image(images[i], dx, dy) 
+    return images
 
+
+def recovered_responseCurve(images, exposureTimes):
+    smallImages = deepcopy(images)
+    smallRow = 10
+    smallCol = 10
+    
     for i in range(0, len(images)):
         smallImages[i] = cv2.resize(images[i], (smallRow, smallCol))
 
@@ -180,6 +184,101 @@ def recovered_response(images, exposureTimes):
     return g
 
 
+def get_E(images, responseCurve, exposureTime):
+    logExposureTime = np.log(exposureTime)
+
+    weight = np.zeros(256)
+    for i in range(256):
+        weight[i] = min(i,256-i)
+
+    h = images[0].shape[0]
+    w = images[0].shape[1]
+
+    lE = np.zeros((h,w,3))
+    E = np.zeros((h,w,3))
+    for channel in range(3): 
+        for i in range(h):
+            for j in range(w):
+                weightSum = 0
+                for p in range(len(images)):
+                    z = images[p][i,j,channel]
+                    weightSum += weight[z]
+                    lE[i,j,channel] += weight[z]*(responseCurve[channel][z]-logExposureTime[p])
+                if weightSum != 0:
+                    lE[i,j,channel] /= weightSum
+                E[i,j,channel] = math.e**lE[i,j,channel]
+    return E
+
+
+def tone_mapping(lE):
+    '''
+    Input:
+        logE raddience(HDR) of an image.
+    Output:
+        LDR image from the input logE raddience.
+    '''
+    h = lE.shape[0]
+    w = lE.shape[1]
+
+    # Global mapping
+    lw = np.zeros((h,w))
+    lw_bar = 0
+    lm = np.zeros((h,w))
+    e = 0.0000000000000001
+    a = 1
+    for i in range(h):
+        for j in range(w):
+            for channel in range(3):
+                lw[i,j] += lE[i,j,channel]
+            if lw[i,j] == 0:
+                lw_bar += math.log(e+lw[i,j])
+            else:
+                lw_bar += math.log(lw[i,j])
+            lm[i,j] = a*lw[i,j]
+    
+    lw_bar = math.exp(lw_bar/(h*w))
+    lm = lm/lw_bar
+ 
+    # Local mapping
+    lblur = []
+    for s in range(1,10,2):
+        lblur.append(cv2.GaussianBlur(lm,(s,s),0,0))
+
+    # e: threshold
+    # phi: for sharpening
+    Smax = np.zeros((h,w),dtype = int)
+    e = 0.05
+    phi = 8
+    for i in range(h):
+        for j in range(w):
+            for s in range(4):
+                v = lblur[s][i,j]-lblur[s+1][i,j]
+                v /= lblur[s][i,j] + ((2**phi)*a)/((2*s+1)**2)
+                if v < e:
+                    Smax[i,j] = s
+
+    lwhite = 5
+    ld = np.zeros((h,w))
+    for i in range(h):
+        for j in range(w):
+            ld[i,j]  = 1 + lm[i,j]/(lwhite**2)
+            ld[i,j] *= lm[i,j]
+            ld[i,j] /= 1 + lblur[Smax[i,j]][i,j]
+
+    reconstructedLDR = np.zeros((h,w,3))
+    for i in range(h):
+        for j in range(w):
+            for channel in range(3):
+                reconstructedLDR[i,j,channel] = ld[i,j]*lE[i,j,channel]/lw[i,j]
+
+    return reconstructedLDR
+
+
+
 if __name__ == "__main__":
-    images, exposureTimes = read_image('data/dataset0')
-    g = recovered_response(images, exposureTimes)
+    images, exposureTimes = read_image('data/shouen')
+    images_aligned = align_images(images)
+    g = recovered_responseCurve(images_aligned, exposureTimes)
+    E = get_E(images_aligned, g, exposureTimes)
+    LDRimage = tone_mapping(E)
+    show_image(LDRimage)
