@@ -71,7 +71,7 @@ def find_shift(source, target, x, y, thres=4):
     bestX, bestY = 0, 0
     
     median = np.mean(source)
-    bitSrc = cv2.inRange(source, median,256)
+    bitSrc = cv2.inRange(source, median, 256)
     maskSrc = cv2.inRange(source, median-thres, median+thres)
 
     median = np.mean(target)
@@ -83,7 +83,7 @@ def find_shift(source, target, x, y, thres=4):
             shiftSrc = shift_image(bitSrc, dx, dy)
             shiftMaskSrc = shift_image(maskSrc, dx, dy)
             
-            error = count_error(shiftSrc, bitTar, maskSrc, maskTar)
+            error = count_error(shiftSrc, bitTar, shiftMaskSrc, maskTar)
             if error<minError:
                 minError = error
                 bestX, bestY = dx, dy
@@ -94,7 +94,7 @@ def find_shift(source, target, x, y, thres=4):
 def align_image(source, target):
     h, w = source.shape
     
-    if h<128 or w<128:
+    if h<200 or w<200:
         dx, dy = find_shift(source, target, 0, 0)
     else:
         halfSrc = cv2.resize(source, (w//2, h//2))
@@ -102,6 +102,20 @@ def align_image(source, target):
         prevX, prevY = align_image(halfSrc, halfTar)
         dx, dy = find_shift(source, target, prevX*2, prevY*2)
     return dx, dy
+
+
+def align_images(images, reshapeRatio=1):
+    for i in range(0, len(images)):
+        h, w, _ = images[i].shape
+        images[i] = cv2.resize(images[i], (w//reshapeRatio, h//reshapeRatio))
+    # print(w//reshapeRatio, h//reshapeRatio)
+    for i in range(1, len(images)):
+        img1 = cv2.cvtColor(images[i], cv2.COLOR_BGR2GRAY)
+        img2 = cv2.cvtColor(images[i-1], cv2.COLOR_BGR2GRAY)
+        dx, dy = align_image(img1, img2)
+        images[i] = shift_image(images[i], dx, dy) 
+        # print(dx,dy)
+    return images
 
 
 def gsolve(Z, B, l, w):
@@ -150,15 +164,6 @@ def gsolve(Z, B, l, w):
     return g, lE
 
 
-def align_images(images):
-    for i in range(1, len(images)):
-        img1 = cv2.cvtColor(images[i], cv2.COLOR_BGR2GRAY)
-        img2 = cv2.cvtColor(images[i-1], cv2.COLOR_BGR2GRAY)
-        dx, dy = align_image(img1, img2)
-        images[i] = shift_image(images[i], dx, dy) 
-    return images
-
-
 def recovered_responseCurve(images, exposureTimes):
     smallImages = deepcopy(images)
     smallRow = 10
@@ -184,7 +189,7 @@ def recovered_responseCurve(images, exposureTimes):
     return g
 
 
-def get_E(images, responseCurve, exposureTime):
+def recovered_E(images, responseCurve, exposureTime):
     logExposureTime = np.log(exposureTime)
 
     weight = np.zeros(256)
@@ -195,18 +200,17 @@ def get_E(images, responseCurve, exposureTime):
     w = images[0].shape[1]
 
     lE = np.zeros((h,w,3))
-    E = np.zeros((h,w,3))
     for channel in range(3): 
         for i in range(h):
             for j in range(w):
                 weightSum = 0
-                for p in range(len(images)):
-                    z = images[p][i,j,channel]
+                for image in range(len(images)):
+                    z = images[image][i,j,channel]
                     weightSum += weight[z]
-                    lE[i,j,channel] += weight[z]*(responseCurve[channel][z]-logExposureTime[p])
+                    lE[i,j,channel] += weight[z]*(responseCurve[channel][z]-logExposureTime[image])
                 if weightSum != 0:
                     lE[i,j,channel] /= weightSum
-                E[i,j,channel] = math.e**lE[i,j,channel]
+    E = np.exp(lE)
     return E
 
 
@@ -276,9 +280,12 @@ def tone_mapping(lE):
 
 
 if __name__ == "__main__":
-    images, exposureTimes = read_image('data/shouen')
-    images_aligned = align_images(images)
+    images, exposureTimes = read_image('data/campus')
+    images_aligned = align_images(images, reshapeRatio=5)
     g = recovered_responseCurve(images_aligned, exposureTimes)
-    E = get_E(images_aligned, g, exposureTimes)
-    LDRimage = tone_mapping(E)
-    show_image(LDRimage)
+    E = recovered_E(images_aligned, g, exposureTimes)
+    # g = recovered_responseCurve(images, exposureTimes)
+    # E = recovered_E(images, g, exposureTimes)
+    # LDRimage = tone_mapping(E)
+    print(E[:,:,1].shape)
+    show_image(E)
