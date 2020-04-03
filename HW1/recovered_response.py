@@ -189,7 +189,7 @@ def recovered_responseCurve(images, exposureTimes):
     return g
 
 
-def recovered_E(images, responseCurve, exposureTime):
+def recovered_radiance(images, responseCurve, exposureTime):
     logExposureTime = np.log(exposureTime)
 
     weight = np.zeros(256)
@@ -214,78 +214,61 @@ def recovered_E(images, responseCurve, exposureTime):
     return E
 
 
-def tone_mapping(lE):
+def global_tone_mapping(radiance, a=0.5, l_white=0.9):
     '''
     Input:
-        logE raddience(HDR) of an image.
+        radiance(HDR) of an image.
     Output:
-        LDR image from the input logE raddience.
+        reconstructedLDR : LDR image from the input E raddience.
+        lm : linear transform after global mapping
     '''
-    h = lE.shape[0]
-    w = lE.shape[1]
+    
+    e = 1e-15  # avoid log 0
 
     # Global mapping
-    lw = np.zeros((h,w))
-    lw_bar = 0
-    lm = np.zeros((h,w))
-    e = 0.0000000000000001
-    a = 1
-    for i in range(h):
-        for j in range(w):
-            for channel in range(3):
-                lw[i,j] += lE[i,j,channel]
-            if lw[i,j] == 0:
-                lw_bar += math.log(e+lw[i,j])
-            else:
-                lw_bar += math.log(lw[i,j])
-            lm[i,j] = a*lw[i,j]
+    lw = radiance
+    lw_bar = np.exp(np.mean(np.log(e+lw)))
+    lm = a*lw/lw_bar
     
-    lw_bar = math.exp(lw_bar/(h*w))
-    lm = lm/lw_bar
- 
+    ld = lm*(1+lm/l_white**2)/(1+lm)
+    reconstructedLDR = ld
+
+    return reconstructedLDR, lm
+
+
+def local_tone_mapping(radiance, a=0.5, l_white=0.9):
+
+    _, lm = global_tone_mapping(radiance, a, l_white)
+
     # Local mapping
     lblur = []
-    for s in range(1,10,2):
+    for s in range(1,16,2):
         lblur.append(cv2.GaussianBlur(lm,(s,s),0,0))
 
     # e: threshold
     # phi: for sharpening
-    Smax = np.zeros((h,w),dtype = int)
     e = 0.05
     phi = 8
-    for i in range(h):
-        for j in range(w):
-            for s in range(4):
-                v = lblur[s][i,j]-lblur[s+1][i,j]
-                v /= lblur[s][i,j] + ((2**phi)*a)/((2*s+1)**2)
-                if v < e:
-                    Smax[i,j] = s
-
-    lwhite = 5
-    ld = np.zeros((h,w))
-    for i in range(h):
-        for j in range(w):
-            ld[i,j]  = 1 + lm[i,j]/(lwhite**2)
-            ld[i,j] *= lm[i,j]
-            ld[i,j] /= 1 + lblur[Smax[i,j]][i,j]
-
-    reconstructedLDR = np.zeros((h,w,3))
-    for i in range(h):
-        for j in range(w):
-            for channel in range(3):
-                reconstructedLDR[i,j,channel] = ld[i,j]*lE[i,j,channel]/lw[i,j]
+    for s in range(4):
+        v = lblur[s]-lblur[s+1]
+        v /= np.sum(lblur[s]) + ((2**phi)*a)/((2*s+1)**2)
+        if np.all(v < e):
+            Smax = s
+    
+    ld = lm/(1+lblur[Smax])
+    # ld = lm*(1+lblur[Smax]/l_white**2)/(1+lblur[Smax])
+    reconstructedLDR = ld
 
     return reconstructedLDR
 
 
-
 if __name__ == "__main__":
     images, exposureTimes = read_image('data/campus')
-    images_aligned = align_images(images, reshapeRatio=5)
+    images_aligned = align_images(images, reshapeRatio=2)
     g = recovered_responseCurve(images_aligned, exposureTimes)
-    E = recovered_E(images_aligned, g, exposureTimes)
+    E = recovered_radiance(images_aligned, g, exposureTimes)
     # g = recovered_responseCurve(images, exposureTimes)
-    # E = recovered_E(images, g, exposureTimes)
-    # LDRimage = tone_mapping(E)
+    # E = recovered_radiance(images, g, exposureTimes)
+    LDRimage = local_tone_mapping(E, 2)
     print(E[:,:,1].shape)
-    show_image(E)
+    show_image(LDRimage)
