@@ -7,8 +7,8 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import math
 from copy import deepcopy
+from argparse import ArgumentParser
 
 
 def get_exposureTime(imgPath):
@@ -104,17 +104,19 @@ def align_image(source, target):
     return dx, dy
 
 
-def align_images(images, reshapeRatio=1):
-    for i in range(0, len(images)):
-        h, w, _ = images[i].shape
-        images[i] = cv2.resize(images[i], (w//reshapeRatio, h//reshapeRatio))
-    # print(w//reshapeRatio, h//reshapeRatio)
+def align_images(images):
     for i in range(1, len(images)):
         img1 = cv2.cvtColor(images[i], cv2.COLOR_BGR2GRAY)
         img2 = cv2.cvtColor(images[i-1], cv2.COLOR_BGR2GRAY)
         dx, dy = align_image(img1, img2)
-        images[i] = shift_image(images[i], dx, dy) 
-        # print(dx,dy)
+        images[i] = shift_image(images[i], dx, dy)
+    return images
+
+
+def reshape_images(images, reshapeRatio=1):
+    for i in range(0, len(images)):
+        h, w, _ = images[i].shape
+        images[i] = cv2.resize(images[i], (w//reshapeRatio, h//reshapeRatio))
     return images
 
 
@@ -227,11 +229,13 @@ def global_tone_mapping(radiance, a=0.5, l_white=0.9):
 
     # Global mapping
     lw = radiance
-    lw_bar = np.exp(np.mean(np.log(e+lw)))
+    # [B, G, R] = [0.114, 0.587, 0.299]
+    lw_bar = np.exp(0.114*np.mean(np.log(e+lw[:,:,0])) + 0.587*np.mean(np.log(e+lw[:,:,1])) + 0.299*np.mean(np.log(e+lw[:,:,2])))
+    # lw_bar = np.exp(np.mean(np.log(e+lw)))
     lm = a*lw/lw_bar
     
     ld = lm*(1+lm/l_white**2)/(1+lm)
-    reconstructedLDR = ld
+    reconstructedLDR = np.clip(np.rint(ld*255), 0, 255).astype(np.uint8)
 
     return reconstructedLDR, lm
 
@@ -257,18 +261,39 @@ def local_tone_mapping(radiance, a=0.5, l_white=0.9):
     
     ld = lm/(1+lblur[Smax])
     # ld = lm*(1+lblur[Smax]/l_white**2)/(1+lblur[Smax])
-    reconstructedLDR = ld
+    #reconstructedLDR = np.clip(np.rint(ld*255), 0, 255).astype(np.uint8)
+    reconstructedLDR = np.clip(np.rint(ld*255), 0, 255).astype(np.uint8)
 
     return reconstructedLDR
 
+parser = ArgumentParser('High Dynamic Range Imaging')
+parser.add_argument('--dataset', default='dataset0', help='Name of input dataset.')
+parser.add_argument('--alpha', default='0.5', type=float, help='Parameter for photographic tonemapping.')
+parser.add_argument('--ratio', default='2', type=int, help='Reshape ratio.')
+parser.add_argument('--align', dest='align', action='store_true')
+parser.add_argument('--no-align', dest='align', action='store_false')
+parser.set_defaults(align=True)
+
 
 if __name__ == "__main__":
-    images, exposureTimes = read_image('data/campus')
-    images_aligned = align_images(images, reshapeRatio=2)
-    g = recovered_responseCurve(images_aligned, exposureTimes)
-    E = recovered_radiance(images_aligned, g, exposureTimes)
-    # g = recovered_responseCurve(images, exposureTimes)
-    # E = recovered_radiance(images, g, exposureTimes)
-    LDRimage = local_tone_mapping(E, 2)
+    
+    args = vars(parser.parse_args())
+    dataset = args['dataset']
+    reshapeRatio = args['ratio']
+    alpha = args['alpha']
+
+    inputPath = 'data/'+dataset
+    images, exposureTimes = read_image(inputPath)
+    images = reshape_images(images, reshapeRatio)
+    if args['align']:
+        images_aligned = align_images(images)
+        g = recovered_responseCurve(images_aligned, exposureTimes)
+        E = recovered_radiance(images_aligned, g, exposureTimes)
+    else:
+        g = recovered_responseCurve(images, exposureTimes)
+        E = recovered_radiance(images, g, exposureTimes)
+    LDRimage = local_tone_mapping(E, a=alpha)
     print(E[:,:,1].shape)
+    resultPath = 'result/'+dataset+'_'+str(alpha)+'.png'
+    cv2.imwrite(resultPath, LDRimage)
     show_image(LDRimage)
