@@ -54,8 +54,8 @@ python HDR.py --dataset [dataset name] --alpha [alpha]
 ```
 
 * There are two optional argument
-  * --ratio: Avoid so long computition time, it can reshape to the smaller image first.
-  * --no-align: Do the reconstruct without alignment.
+  * --ratio [ratio] : Avoid so long computition time, it can reshape to the smaller image first.
+  * --no-align : Do the reconstruct without alignment.
 
 ## 4. Result
 * Input images: `data/waterfall`
