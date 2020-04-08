@@ -26,7 +26,8 @@
 ### 3.2 Input image spec
 * If the input image include exif that included exposure time, then don't need time.txt file.
 * Otherwise, you need to have a file time.txt that included exposure time for every picture.
-  * Example for time.txt
+
+Example for time.txt
 
 ```
 0.03125
@@ -47,7 +48,7 @@
 1024
 ```
 
-### Run
+### 3.3 Run
 ```
 python HDR.py --dataset [dataset name] --alpha [alpha]
 ```
@@ -57,12 +58,13 @@ python HDR.py --dataset [dataset name] --alpha [alpha]
   * --no-align: Do the reconstruct without alignment.
 
 ## 4. Result
-* Input images `data/waterfall`
+* Input images: `data/waterfall`
 
 ### 4.1 Parameter
-* alpha=0.5
-* ratio=2
-* align
+* --dataset waterfall
+* --alpha 0.5
+* --ratio 2
+* --align
 
 ### 4.2 Result
 ![](result/waterfall_0.5.png)
