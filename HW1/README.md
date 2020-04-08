@@ -24,10 +24,10 @@
 ```
 
 ### 3.2 Input image spec
-* If the input image include exif that included exposure time, then don't need time.txt file.
-* Otherwise, you need to have a file time.txt that included exposure time for every picture.
+* If the input image include exif that included exposure time, then don't need `time.txt` file.
+* Otherwise, you need to have a file `time.txt` that included exposure time for every picture.
 
-Example for time.txt
+Example for `time.txt`
 
 ```
 0.03125
