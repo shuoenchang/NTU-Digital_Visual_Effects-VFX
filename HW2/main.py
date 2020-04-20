@@ -19,8 +19,9 @@ def main(args):
     inputPath = 'data/'+dataset
     images, exposureTimes = read_image(inputPath)
     images = reshape_images(images, reshapeRatio)
-    featurePoints = harris_detector(images[0])
-    show_feature(images[0], featurePoints)
+    keyPoints = harris_detector(images[0])
+    show_feature(images[0], keyPoints)
+    keypoint_descriptor(images[0], keyPoints)
 
 if __name__ == '__main__':
     args = parser.parse_args()

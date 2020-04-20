@@ -4,11 +4,16 @@ from scipy import ndimage as ndi
 from utils import *
 
 
-def harris_detector(img, k=0.04, thresRatio=0.01):
-    # Compute x and y derivatives of image
-    grayImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # gray image
+def compute_gradient(image):
+    grayImg = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # gray image
     I = cv2.GaussianBlur(grayImg, (5,5), 0)
     Iy, Ix = np.gradient(I)
+    return Ix, Iy
+
+
+def harris_detector(image, k=0.04, thresRatio=0.01):
+    # Compute x and y derivatives of image
+    Ix, Iy = compute_gradient(image)
 
     # Compute products of derivatives at every pixel
     Ix2 = Ix*Ix
@@ -35,5 +40,30 @@ def harris_detector(img, k=0.04, thresRatio=0.01):
     # show_heatimage(R)
     point = np.where(R>0)
     point = np.array(point).T  # (2, n) => (n, 2)
-    point[:,[0, 1]] = point[:,[1, 0]]  # (y, x) => (x, y)
+    # point[:,[0, 1]] = point[:,[1, 0]]  # (y, x) => (x, y)
     return point
+
+
+def orientation_histogram(magnitude, theta, bins):
+    histogram = np.zeros(bins)
+    binSize = 360/bins
+    bucket = np.round(theta/binSize)
+    histogram = np.zeros((bins,) + magnitude.shape)  # (bins, x, y)
+    for b in range(bins):
+        histogram[b][bucket==b] = 1
+        histogram[b] *= magnitude
+        histogram[b] = cv2.GaussianBlur(histogram[b], (5, 5), 0)
+    
+    return histogram
+
+
+def keypoint_descriptor(image, keyPoints):
+    # Orientation assignment
+    Ix, Iy = compute_gradient(image)
+    magnitude = np.sqrt(Ix**2 + Iy**2)
+    theta = np.arctan2(Iy, Ix)*180/np.pi
+    theta[theta<0] = theta[theta<0]+360
+    histogram = orientation_histogram(magnitude, theta, bins=36)
+    orientations = np.argmax(histogram, axis=0)*10 + 5
+    
+    
