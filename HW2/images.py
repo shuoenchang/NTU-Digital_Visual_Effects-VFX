@@ -29,27 +29,3 @@ def reshape_images(images, reshapeRatio=1):
         h, w, _ = images[i].shape
         images[i] = cv2.resize(images[i], (w//reshapeRatio, h//reshapeRatio))
     return images
-
-
-def show_image(img):
-    cv2.namedWindow('My Image', cv2.WINDOW_NORMAL)
-    cv2.imshow('My Image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-
-def show_heatimage(img):
-    heatmap = None
-    heatmap = cv2.normalize(img, heatmap, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-    # heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-    cv2.namedWindow('My Image', cv2.WINDOW_NORMAL)
-    cv2.imshow('My Image', heatmap)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    inputPath = 'data/'+'parrington'
-    images, focals = read_image(inputPath)
-    images = reshape_images(images, 1)
-    show_image(images[0])

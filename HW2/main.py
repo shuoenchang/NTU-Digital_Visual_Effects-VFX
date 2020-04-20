@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from utils import *
 from images import *
 from feature import *
 
@@ -18,8 +19,8 @@ def main(args):
     inputPath = 'data/'+dataset
     images, exposureTimes = read_image(inputPath)
     images = reshape_images(images, reshapeRatio)
-    img = harris_detector(images[0])
-    show_heatimage(img)
+    featurePoints = harris_detector(images[0])
+    show_feature(images[0], featurePoints)
 
 if __name__ == '__main__':
     args = parser.parse_args()
