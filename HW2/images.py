@@ -2,7 +2,8 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from copy import deepcopy
+import matplotlib.ticker as ticker
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def read_image(dirname):
@@ -20,7 +21,6 @@ def read_image(dirname):
     for i in range(1, len(lines)-1):
         if lines[i-1]=='\n' and lines[i+1]=='\n':
             focals += [np.float(lines[i])]
-    print(focals)
     return images, focals
 
 
@@ -38,8 +38,17 @@ def show_image(img):
     cv2.destroyAllWindows()
 
 
-if __name__ == "__main__":
+def show_heatimage(img):
+    heatmap = None
+    heatmap = cv2.normalize(img, heatmap, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    # heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+    cv2.namedWindow('My Image', cv2.WINDOW_NORMAL)
+    cv2.imshow('My Image', heatmap)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
+
+if __name__ == "__main__":
     inputPath = 'data/'+'parrington'
     images, focals = read_image(inputPath)
     images = reshape_images(images, 1)
