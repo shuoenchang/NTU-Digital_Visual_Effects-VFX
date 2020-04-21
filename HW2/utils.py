@@ -1,6 +1,7 @@
 import cv2
 import copy
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def show_image(img):
@@ -30,13 +31,22 @@ def show_feature(img, point):
     cv2.destroyAllWindows()
 
 
-def rotate_image(image, theta, center=None):
-    h, w, _ = image.shape
-    if center==None:
-        center = (w/2, h/2)
-    M = cv2.getRotationMatrix2D(center, theta, 1)
-    rotated = cv2.warpAffine(image, M, (w, h))
-    return rotated
+def show_match(img1, img2, matches):
+    h1, w1, _ = img1.shape
+    h2, w2, _ = img2.shape
+    combine = np.zeros([max(h1, h2), w1 + w2, 3], dtype=np.uint8) + 255
+    combine[:h1, :w1] = img1
+    combine[:h2, w1:] = img2
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+    ax.imshow(combine)
+
+    for (point1, point2) in matches:
+        # print(point1, point2)
+        y1, x1 = point1
+        y2, x2 = point2
+        ax.plot([x1, w1 + x2], [y1, y2], marker='o', linewidth=0.5, markersize=1)
+    plt.show()
 
 
 def normalize(v):

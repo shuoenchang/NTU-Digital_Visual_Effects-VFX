@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from scipy import ndimage as ndi
+from scipy.ndimage import maximum_filter
 from utils import *
 from images import *
 
@@ -36,7 +36,7 @@ def harris_detector(image, k=0.04, thresRatio=0.01):
     # Threshold on value of R and local maximum
     threshold = thresRatio*np.max(R)
     R[R<threshold] = 0
-    localMaxR = ndi.maximum_filter(R, size=5, mode='constant')
+    localMaxR = maximum_filter(R, size=5, mode='constant')
     R[R<localMaxR] = 0
     # show_heatimage(R)
     point = np.where(R>0)
@@ -76,14 +76,14 @@ def keypoint_descriptor(image, keyPoints):
         theta = np.arctan2(Iy, Ix)*180/np.pi
         theta[theta<0] = theta[theta<0]+360
         histogram = orientation_histogram(magnitude, theta, bins=8, sigma=8)
-        if y-8>0 and y+8<h and x-8>0 and x+8<w: # else discard this keypoint
-            print(x, y)
+        if y-8>0 and y+8<h and x-8>0 and x+8<w:  # else discard this keypoint
+            # print(x, y)
             desc = []
-            for suby in range(y-8, y+8, 4):
-                for subx in range(x-8, x+8, 4):
+            for subY in range(y-8, y+8, 4):
+                for subX in range(x-8, x+8, 4):
                     subHistogram = []
                     for bin in range(8):
-                        subHistogram.append(np.sum(histogram[bin][suby:suby+4, subx:subx+4]))
+                        subHistogram.append(np.sum(histogram[bin][subY:subY+4, subX:subX+4]))
                     desc += subHistogram
             desc = normalize(desc)
             if np.any(desc>0.2):
