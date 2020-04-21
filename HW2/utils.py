@@ -1,5 +1,6 @@
 import cv2
 import copy
+import numpy as np
 
 
 def show_image(img):
@@ -27,3 +28,19 @@ def show_feature(img, point):
     cv2.imshow('My Image', img_feature)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+
+def rotate_image(image, theta, center=None):
+    h, w, _ = image.shape
+    if center==None:
+        center = (w/2, h/2)
+    M = cv2.getRotationMatrix2D(center, theta, 1)
+    rotated = cv2.warpAffine(image, M, (w, h))
+    return rotated
+
+
+def normalize(v):
+    norm = np.linalg.norm(v)
+    if norm == 0: 
+       return v
+    return v / norm

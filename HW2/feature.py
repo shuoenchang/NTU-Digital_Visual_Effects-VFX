@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from scipy import ndimage as ndi
 from utils import *
+from images import *
 
 
 def compute_gradient(image):
@@ -44,16 +45,15 @@ def harris_detector(image, k=0.04, thresRatio=0.01):
     return point
 
 
-def orientation_histogram(magnitude, theta, bins):
+def orientation_histogram(magnitude, theta, bins, sigma):
     histogram = np.zeros(bins)
     binSize = 360/bins
     bucket = np.round(theta/binSize)
-    histogram = np.zeros((bins,) + magnitude.shape)  # (bins, x, y)
+    histogram = np.zeros((bins,) + magnitude.shape)  # (bins, h, w)
     for b in range(bins):
         histogram[b][bucket==b] = 1
         histogram[b] *= magnitude
-        histogram[b] = cv2.GaussianBlur(histogram[b], (5, 5), 0)
-    
+        histogram[b] = cv2.GaussianBlur(histogram[b], (5, 5), sigma)
     return histogram
 
 
@@ -63,7 +63,31 @@ def keypoint_descriptor(image, keyPoints):
     magnitude = np.sqrt(Ix**2 + Iy**2)
     theta = np.arctan2(Iy, Ix)*180/np.pi
     theta[theta<0] = theta[theta<0]+360
-    histogram = orientation_histogram(magnitude, theta, bins=36)
+    histogram = orientation_histogram(magnitude, theta, bins=36, sigma=1.5)
     orientations = np.argmax(histogram, axis=0)*10 + 5
     
-    
+    # Local image descriptor
+    descriptors = []
+    h, w, _ = image.shape
+    for y, x in keyPoints:
+        rotated = rotate_image(image, orientations[y, x], (x,y))
+        Ix, Iy = compute_gradient(image)
+        magnitude = np.sqrt(Ix**2 + Iy**2)
+        theta = np.arctan2(Iy, Ix)*180/np.pi
+        theta[theta<0] = theta[theta<0]+360
+        histogram = orientation_histogram(magnitude, theta, bins=8, sigma=8)
+        if y-8>0 and y+8<h and x-8>0 and x+8<w: # else discard this keypoint
+            print(x, y)
+            desc = []
+            for suby in range(y-8, y+8, 4):
+                for subx in range(x-8, x+8, 4):
+                    subHistogram = []
+                    for bin in range(8):
+                        subHistogram.append(np.sum(histogram[bin][suby:suby+4, subx:subx+4]))
+                    desc += subHistogram
+            desc = normalize(desc)
+            if np.any(desc>0.2):
+                desc[desc>0.2] = 0.2
+                desc = normalize(desc)
+            descriptors.append({'point':(y, x), 'desc':desc})
+    return descriptors

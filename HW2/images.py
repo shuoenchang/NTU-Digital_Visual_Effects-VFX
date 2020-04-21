@@ -29,3 +29,12 @@ def reshape_images(images, reshapeRatio=1):
         h, w, _ = images[i].shape
         images[i] = cv2.resize(images[i], (w//reshapeRatio, h//reshapeRatio))
     return images
+
+
+def rotate_image(image, theta, center=None):
+    h, w, _ = image.shape
+    if center==None:
+        center = (w/2, h/2)
+    M = cv2.getRotationMatrix2D(center, theta, 1)
+    rotated = cv2.warpAffine(image, M, (w, h))
+    return rotated
