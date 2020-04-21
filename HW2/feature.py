@@ -36,7 +36,7 @@ def harris_detector(image, k=0.04, thresRatio=0.01):
     # Threshold on value of R and local maximum
     threshold = thresRatio*np.max(R)
     R[R<threshold] = 0
-    localMaxR = maximum_filter(R, size=5, mode='constant')
+    localMaxR = maximum_filter(R, size=3, mode='constant')
     R[R<localMaxR] = 0
     # show_heatimage(R)
     point = np.where(R>0)
@@ -45,25 +45,26 @@ def harris_detector(image, k=0.04, thresRatio=0.01):
     return point
 
 
-def orientation_histogram(magnitude, theta, bins, sigma):
-    histogram = np.zeros(bins)
+def orientation_histogram(image, bins, sigma):
+    Ix, Iy = compute_gradient(image)
+    magnitude = np.sqrt(Ix**2 + Iy**2)
+    theta = np.arctan2(Iy, Ix)*180/np.pi
+    theta[theta<0] = theta[theta<0]+360
+    
     binSize = 360/bins
     bucket = np.round(theta/binSize)
     histogram = np.zeros((bins,) + magnitude.shape)  # (bins, h, w)
     for b in range(bins):
         histogram[b][bucket==b] = 1
         histogram[b] *= magnitude
-        histogram[b] = cv2.GaussianBlur(histogram[b], (5, 5), sigma)
+        histogram[b] = cv2.GaussianBlur(histogram[b], (5,5), sigma)
+    
     return histogram
 
 
 def keypoint_descriptor(image, keyPoints):
     # Orientation assignment
-    Ix, Iy = compute_gradient(image)
-    magnitude = np.sqrt(Ix**2 + Iy**2)
-    theta = np.arctan2(Iy, Ix)*180/np.pi
-    theta[theta<0] = theta[theta<0]+360
-    histogram = orientation_histogram(magnitude, theta, bins=36, sigma=1.5)
+    histogram = orientation_histogram(image, bins=36, sigma=1.5)
     orientations = np.argmax(histogram, axis=0)*10 + 5
     
     # Local image descriptor
@@ -71,11 +72,7 @@ def keypoint_descriptor(image, keyPoints):
     h, w, _ = image.shape
     for y, x in keyPoints:
         rotated = rotate_image(image, orientations[y, x], (x,y))
-        Ix, Iy = compute_gradient(image)
-        magnitude = np.sqrt(Ix**2 + Iy**2)
-        theta = np.arctan2(Iy, Ix)*180/np.pi
-        theta[theta<0] = theta[theta<0]+360
-        histogram = orientation_histogram(magnitude, theta, bins=8, sigma=8)
+        histogram = orientation_histogram(rotated, bins=8, sigma=8)
         if y-8>0 and y+8<h and x-8>0 and x+8<w:  # else discard this keypoint
             # print(x, y)
             desc = []
