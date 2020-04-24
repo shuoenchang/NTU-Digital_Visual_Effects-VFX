@@ -21,8 +21,8 @@ def main(args):
     images, exposureTimes = read_image(inputPath)
     images = reshape_images(images, reshapeRatio)
 
-    img1 = images[4]
-    img2 = images[3]
+    img1 = images[8]
+    img2 = images[7]
     keyPoints1 = harris_detector(img1)
     desc1 = keypoint_descriptor(img1, keyPoints1)
 
@@ -30,9 +30,12 @@ def main(args):
     desc2 = keypoint_descriptor(img2, keyPoints2)
 
     matches = find_matches(desc1, desc2, 0.8)
-    # print(len(matches))
+    bestdyx = ransac(matches, 1000, 3)
+    # print(bestdyx)
     # show_match(img1, img2, matches)
-    bestdyx = ransac(matches)
+    result = combine_matches(img1, img2, bestdyx)
+    show_image(result)
+
 
 
 if __name__ == '__main__':
