@@ -32,7 +32,7 @@ def main(args):
     matches = find_matches(desc1, desc2, 0.8)
     # print(len(matches))
     # show_match(img1, img2, matches)
-    bestdxy = ransac(matches)
+    bestdyx = ransac(matches)
 
 
 if __name__ == '__main__':
