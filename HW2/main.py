@@ -30,8 +30,9 @@ def main(args):
     desc2 = keypoint_descriptor(img2, keyPoints2)
 
     matches = find_matches(desc1, desc2, 0.8)
-    print(len(matches))
-    show_match(img1, img2, matches)
+    # print(len(matches))
+    # show_match(img1, img2, matches)
+    bestdxy = ransac(matches)
 
 
 if __name__ == '__main__':

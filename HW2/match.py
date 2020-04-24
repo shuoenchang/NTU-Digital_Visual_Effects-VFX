@@ -15,3 +15,22 @@ def find_matches(desc1, desc2, thres=0.8):
         if first / second < thres:
             matches.append([desc1[i]['point'], desc2[sortIndex[0]]['point']])
     return matches
+
+
+def ransac(matches, iterCount=1000, threshold=3):
+    maxInliner = -1
+    for i in range(iterCount):
+        randint = np.random.randint(0, len(matches))
+        dyx = np.subtract(matches[randint][0], matches[randint][1])
+        matches = np.array(matches)
+        afterShift = matches[:, 0] - dyx
+        diff = matches[:, 1] - afterShift
+        inliner = 0
+        for d in diff:
+            y, x = d
+            if np.sqrt(x**2+y**2)<threshold:
+                inliner += 1
+        if maxInliner<inliner:
+            maxInliner=inliner
+            bestdyx = tuple(dyx)
+    return bestdyx
