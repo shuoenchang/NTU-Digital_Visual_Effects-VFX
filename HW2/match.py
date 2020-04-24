@@ -38,27 +38,29 @@ def ransac(matches, iterCount=1000, threshold=3):
 
 def combine_matches(img1, img2, dyx):
     dy, dx = dyx
-    if dx<0:
-        img1, img2 = img2, img1
-        dy, dx = -dy, -dx
+    # if dx<0:
+    #     img1, img2 = img2, img1
+    #     dy, dx = -dy, -dx
     h1, w1, _ = img1.shape
     h2, w2, _ = img2.shape
-    
-    combine = np.zeros([max(h1, h2)+abs(dy), w2+dx, 3], dtype=np.uint8) + 0
+    print(h1,w1,h2,w2)
+    print(dy, dx)
+    combine = np.zeros([max(h1, h2)+abs(dy), w1+dx, 3], dtype=np.uint8) + 0
+    occlusion = w2-dx
     if dy>0:
-        combine[:h1, :dx] = img1[:h1, :dx]
+        combine[:h1, :w1-occlusion] = img1[:h1, :w1-occlusion]
         combine[dy:h2+dy, w1:] = img2[:h2, w2-dx:]
         
-        for i, x in enumerate(range(dx, w1)):  # Blending
-            combine[:h1, x] += (img1[:h1, x]*((w1-dx-i)/(w1-dx))).astype(np.uint8)
-            combine[dy:h2+dy, x] += (img2[:h2, i]*(i/(w1-dx))).astype(np.uint8)
+        for i, x in enumerate(range(w1-occlusion, w1)):  # Blending
+            combine[:h1, x] += (img1[:h1, x]*((occlusion-i)/occlusion)).astype(np.uint8)
+            combine[dy:h2+dy, x] += (img2[:h2, i]*(i/occlusion)).astype(np.uint8)
 
     else:
-        combine[dy:h1+dy, :w1-dx] = img1[:h1, :w1-dx]
+        combine[dy:h1+dy, :w1-occlusion] = img1[:h1, :w1-occlusion]
         combine[:h2, w1:] = img2[:h2, w2-dx:]
 
-        for i, x in enumerate(range(dx, w1)):  # Blending
-            combine[dy:h1+dy, x] += (img1[:h1, x]*((w1-dx-i)/(w1-dx))).astype(np.uint8)
-            combine[:h2, x] += (img2[:h2, i]*(i/(w1-dx))).astype(np.uint8)
+        for i, x in enumerate(range(w1-occlusion, w1)):  # Blending
+            combine[dy:h1+dy, x] += (img1[:h1, x]*((occlusion-i)/occlusion)).astype(np.uint8)
+            combine[:h2, x] += (img2[:h2, i]*(i/occlusion)).astype(np.uint8)
     
     return combine

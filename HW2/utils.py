@@ -34,7 +34,7 @@ def show_feature(img, point):
 def show_match(img1, img2, matches):
     h1, w1, _ = img1.shape
     h2, w2, _ = img2.shape
-    combine = np.zeros([max(h1, h2), w1 + w2, 3], dtype=np.uint8) + 255
+    combine = np.zeros([max(h1, h2), w1 + w2, 3], dtype=np.uint8)
     combine[:h1, :w1] = img1
     combine[:h2, w1:] = img2
 
