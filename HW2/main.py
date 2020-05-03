@@ -3,6 +3,7 @@ from utils import *
 from images import *
 from feature import *
 from match import *
+from projection import *
 
 
 parser = ArgumentParser('High Dynamic Range Imaging')
@@ -18,8 +19,10 @@ def main(args):
     reshapeRatio = args.ratio
 
     inputPath = 'data/'+dataset
-    images, exposureTimes = read_image(inputPath)
+    images, focals = read_image(inputPath)
     images = reshape_images(images, reshapeRatio)
+    images = cylindrical_projection(images, focals)
+
     result = images[-1]
     if args.right:
         order = range(0, len(images)-1, 1)
