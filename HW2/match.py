@@ -43,8 +43,8 @@ def combine_matches(img1, img2, dyx):
     #     dy, dx = -dy, -dx
     h1, w1, _ = img1.shape
     h2, w2, _ = img2.shape
-    print(h1,w1,h2,w2)
-    print(dy, dx)
+    # print(h1,w1,h2,w2)
+    # print(dy, dx)
     combine = np.zeros([max(h1, h2)+abs(dy), w1+dx, 3], dtype=np.uint8) + 0
     occlusion = w2-dx
     if dy>0:
@@ -56,6 +56,7 @@ def combine_matches(img1, img2, dyx):
             combine[dy:h2+dy, x] += (img2[:h2, i]*(i/occlusion)).astype(np.uint8)
 
     else:
+        dy = -dy
         combine[dy:h1+dy, :w1-occlusion] = img1[:h1, :w1-occlusion]
         combine[:h2, w1:] = img2[:h2, w2-dx:]
 

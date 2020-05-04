@@ -29,6 +29,7 @@ def main(args):
     else:
         order = range(len(images)-1, 1, -1)
     for i in order:
+        print(i)
         if args.right:
             img1 = images[i]
             img2 = images[i+1]
@@ -47,9 +48,10 @@ def main(args):
         # show_match(img1, img2, matches)
         result = combine_matches(result, img2, bestdyx)
         # show_image(result)
-    show_image(result)
-    resultPath = 'result/'+dataset+'.png'
+    resultPath = 'result/'+dataset+'_proj.png'
     cv2.imwrite(resultPath, result)
+    show_image(result)
+    
 
 
 if __name__ == '__main__':
