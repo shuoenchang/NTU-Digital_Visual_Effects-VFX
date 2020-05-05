@@ -10,11 +10,11 @@ from Alignment import *
 parser = ArgumentParser('High Dynamic Range Imaging')
 parser.add_argument('--dataset', default='parrington', help='Name of input dataset.')
 parser.add_argument('--ratio', default='1', type=int, help='Reshape ratio.')
-parser.add_argument('--right', dest='right', action='store_true')
-parser.add_argument('--left', dest='right', action='store_false')
+parser.add_argument('--right', dest='left', action='store_false', help='Start from right.')
+parser.add_argument('--left', dest='left', action='store_true', help='Start from left.')
 parser.add_argument('--align', dest='align', action='store_true')
 parser.add_argument('--no-align', dest='align', action='store_false')
-parser.set_defaults(right=False)
+parser.set_defaults(left=False)
 parser.set_defaults(align=False)
 
 
@@ -28,7 +28,7 @@ def main(args):
     images = cylindrical_projection(images, focals)
 
     
-    if args.right:
+    if args.left:
         order = range(0, len(images)-1, 1)
     else:
         order = range(len(images)-1, 0, -1)
@@ -37,7 +37,7 @@ def main(args):
     shift = []
     for i in order:
         print(i)
-        if args.right:
+        if args.left:
             img1 = images[i]
             img2 = images[i+1]
         else:
