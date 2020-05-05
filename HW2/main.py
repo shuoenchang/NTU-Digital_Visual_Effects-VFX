@@ -12,7 +12,10 @@ parser.add_argument('--dataset', default='parrington', help='Name of input datas
 parser.add_argument('--ratio', default='1', type=int, help='Reshape ratio.')
 parser.add_argument('--right', dest='right', action='store_true')
 parser.add_argument('--left', dest='right', action='store_false')
+parser.add_argument('--align', dest='align', action='store_true')
+parser.add_argument('--no-align', dest='align', action='store_false')
 parser.set_defaults(right=False)
+parser.set_defaults(align=False)
 
 
 def main(args):
@@ -24,11 +27,13 @@ def main(args):
     images = reshape_images(images, reshapeRatio)
     images = cylindrical_projection(images, focals)
 
-    result = images[-1]
+    
     if args.right:
         order = range(0, len(images)-1, 1)
     else:
         order = range(len(images)-1, 0, -1)
+    
+    result = images[order[0]]
     shift = []
     for i in order:
         print(i)
@@ -52,19 +57,22 @@ def main(args):
         # show_image(result)
     resultPath = 'result/'+dataset+'_proj.png'
     cv2.imwrite(resultPath, result)
-    show_image(result)
+    # show_image(result)
     
-    keyPoints1 = harris_detector(images[order[0]])
-    desc1 = keypoint_descriptor(images[order[0]],keyPoints1)
-    keyPoints2 = harris_detector(images[np.size(order)-1])
-    desc2 = keypoint_descriptor(images[np.size(order)-1],keyPoints2)
-    matches = find_matches(desc1, desc2, 0.8)
-    bestdyx = ransac(matches, 1000, 3)
-    
-    resultPath = 'result/'+dataset+'_align.png'
-    result_align = End2endAlignment(result,bestdyx)    
-    cv2.imwrite(resultPath,result_align)
-    show_image(result_align)
+    if(args.align):
+        keyPoints1 = harris_detector(images[order[0]])
+        desc1 = keypoint_descriptor(images[order[0]], keyPoints1)
+        keyPoints2 = harris_detector(images[order[-1]])
+        desc2 = keypoint_descriptor(images[order[-1]], keyPoints2)
+        matches = find_matches(desc1, desc2, 0.8)
+        bestdyx = ransac(matches, 1000, 3)
+        
+        resultPath = 'result/'+dataset+'_align.png'
+        result_align = End2endAlignment(result,bestdyx)    
+        cv2.imwrite(resultPath,result_align)
+        # show_image(result_align)
+    else:
+        result_align = result
 
     resultPath = 'result/'+dataset+'_crop.png'
     result_crop = crop(result_align)    
