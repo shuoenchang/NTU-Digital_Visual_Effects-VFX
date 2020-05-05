@@ -27,7 +27,9 @@ def main(args):
     if args.right:
         order = range(0, len(images)-1, 1)
     else:
-        order = range(len(images)-1, 1, -1)
+        order = range(len(images)-1, 0, -1)
+    
+    shift = []
     for i in order:
         print(i)
         if args.right:
@@ -44,6 +46,7 @@ def main(args):
 
         matches = find_matches(desc1, desc2, 0.8)
         bestdyx = ransac(matches, 1000, 3)
+        shift.append(bestdyx[0])
         # print(bestdyx)
         # show_match(img1, img2, matches)
         result = combine_matches(result, img2, bestdyx)
