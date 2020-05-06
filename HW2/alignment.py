@@ -25,7 +25,7 @@ def crop(image):
     low = 0
     upper = h-1
     for i in range(h):
-        print(np.size(np.where(img_thresh[i] != 0)))
+        # print(np.size(np.where(img_thresh[i] != 0)))
         if np.size(np.where(img_thresh[i] != 0)) > 0.9*w:
             low = i
             break
@@ -34,7 +34,7 @@ def crop(image):
             upper = i+1
             break
     
-    print(low,upper)
+    # print(low,upper)
     return image[low:upper]
 
         
