@@ -69,5 +69,5 @@ python main.py --dataset [dataset name] (--left or --right)
 * --right
 
 ### 4.2 Result
-![](result/parrington_align.png)
+![](result/parrington_crop.png)
 
