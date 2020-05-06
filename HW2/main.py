@@ -7,7 +7,7 @@ from projection import *
 from alignment import *
 
 
-parser = ArgumentParser('High Dynamic Range Imaging')
+parser = ArgumentParser('Image stitching')
 parser.add_argument('--dataset', default='parrington', help='Name of input dataset.')
 parser.add_argument('--ratio', default='1', type=int, help='Reshape ratio.')
 parser.add_argument('--right', dest='left', action='store_false', help='Start from right.')
