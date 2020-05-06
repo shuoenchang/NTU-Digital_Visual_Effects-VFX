@@ -25,7 +25,7 @@
 
 ### 3.2 Input image spec
 * `pano.txt` is a file that included focal length for each picture that estimated by [autostich](http://matthewalunbrown.com/autostitch/autostitch.html)
-* For autostitch, you need to use the old 32-bit Windows version
+* For autostitch, you need to use the old [32-bit Windows version](http://matthewalunbrown.com/autostitch/autostitch.zip)
 * The file looks like the following:
 
 ```
